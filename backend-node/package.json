@@ -1,0 +1,11 @@
+{
+  "name": "midi-visualize-backend",
+  "version": "1.0.0",
+  "description": "Backend for midi-visualize",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.15.2",
+    "midi": "^0.9.5",
+    "socket.io": "^2.0.4"
+  }
+}
