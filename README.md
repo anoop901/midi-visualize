@@ -7,6 +7,7 @@ Before starting, make sure you have [Node and NPM](https://docs.npmjs.com/downlo
 
 Clone this repository, and `cd` to the root directory in a terminal.
 
+### Frontend
 Build the frontend:
 ```
 cd frontend
@@ -14,9 +15,16 @@ npm install
 npm run build
 ```
 
-Run the server:
+### Backend
+Go to backend directory (if on Windows, replace forward slash `/` with backslash `\`)
 ```
 cd ../backend-node
+```
+
+Install the implicit indirect dependencies (of the npm `midi` package) listed for your platform [here](https://www.npmjs.com/package/midi#prerequisites).
+
+Install direct dependencies and run the server:
+```
 npm install
 node index.js
 ```
