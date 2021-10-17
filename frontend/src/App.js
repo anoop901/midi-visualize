@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import uuidv1 from 'uuid'
+import {v4 as uuidv4} from 'uuid'
 import openSocket from 'socket.io-client'
 
 /*
@@ -83,7 +83,7 @@ class App extends Component {
       const index = msg.note_number - midiKeyOffset;
       this.setState({
         pressedKeys: this.state.pressedKeys.map((v, i) => (i === index ? true : v)),
-        history: this.state.history.concat([{index: index, velocity: msg.note_velocity / 64, startTime: performance.now(), ended: false, id: uuidv1()}])
+        history: this.state.history.concat([{index: index, velocity: msg.note_velocity / 64, startTime: performance.now(), ended: false, id: uuidv4()}])
       });
     })
 
