@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useState } from "react";
 import "./App.css";
 import { v4 as uuidv4 } from "uuid";
 import openSocket from "socket.io-client";
+import update from "immutability-helper";
 
 /*
 a history entry looks like this:
@@ -33,41 +34,82 @@ function isWhiteKey(index) {
   return whiteKeys.indexOf(index % 12) >= 0;
 }
 
+function ensureNotNegative(x) {
+  return x < 0 ? 0 : x;
+}
+
+const pr = new Intl.PluralRules("en-US", { type: "ordinal" });
+const suffixes = new Map([
+  ["one", "st"],
+  ["two", "nd"],
+  ["few", "rd"],
+  ["other", "th"],
+]);
+function formatOrdinal(n) {
+  const rule = pr.select(n);
+  const suffix = suffixes.get(rule);
+  return `${n}${suffix}`;
+}
+
 // sharps: F C G D A E B
 // flats:  B E A D G C F
 
+const noteNames = [
+  "A",
+  "B♭",
+  "B",
+  "C",
+  "C♯",
+  "D",
+  "E♭",
+  "E",
+  "F",
+  "F♯",
+  "G",
+  "G♯",
+];
+
 function indexToName(index) {
-  return ["A", "B♭", "B", "C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯"][
-    index % 12
-  ];
+  return noteNames[index % 12];
   //return ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"][index % 12];
+}
+
+function generateInitialNoteCounts() {
+  const ret = {};
+  for (const noteName of noteNames) {
+    ret[noteName] = 0;
+  }
+  return ret;
 }
 
 function App() {
   const [pressedKeys, setPressedKeys] = useState(Array(numKeys).fill(false));
-  const [history, setHistory] = useState([]);
+  const [history, updateHistory] = useReducer(update, []);
   const [now, setNow] = useState(performance.now());
 
-  function updateHistory() {
-    const now = performance.now();
-    setNow(now);
+  const initialNoteCounts = useCallback(generateInitialNoteCounts, [])();
+  const [noteCounts, updateNoteCounts] = useReducer(update, initialNoteCounts);
+
+  function updateNowToPresent() {
+    setNow(performance.now());
   }
 
   function cleanupHistory() {
     const now = performance.now();
-    setHistory(
-      history.filter(
-        (entry) => !entry.ended || now - entry.endTime < maxSinceEnded
-      )
-    );
+    updateHistory({
+      $apply: (history) =>
+        history.filter(
+          (entry) => !entry.ended || now - entry.endTime < maxSinceEnded
+        ),
+    });
   }
 
   useEffect(() => {
     socket.on("noteon", (msg) => {
       const index = msg.note_number - midiKeyOffset;
       setPressedKeys(pressedKeys.map((v, i) => (i === index ? true : v)));
-      setHistory(
-        history.concat([
+      updateHistory({
+        $push: [
           {
             index: index,
             velocity: msg.note_velocity / 64,
@@ -75,8 +117,9 @@ function App() {
             ended: false,
             id: uuidv4(),
           },
-        ])
-      );
+        ],
+      });
+      updateNoteCounts({ [indexToName(index)]: { $apply: (x) => x + 1 } });
     });
 
     socket.on("noteoff", (msg) => {
@@ -87,27 +130,59 @@ function App() {
           i + midiKeyOffset === msg.note_number ? false : v
         )
       );
-      setHistory(
-        history.map((entry) =>
-          entry.index === index && !entry.ended
-            ? {
-                index: entry.index,
-                velocity: entry.velocity,
-                startTime: entry.startTime,
-                ended: true,
-                endTime: performance.now(),
-                id: entry.id,
-              }
-            : entry
-        )
-      );
+      updateHistory({
+        $apply: (history) =>
+          history.map((entry) =>
+            entry.index === index && !entry.ended
+              ? {
+                  index: entry.index,
+                  velocity: entry.velocity,
+                  startTime: entry.startTime,
+                  ended: true,
+                  endTime: performance.now(),
+                  id: entry.id,
+                }
+              : entry
+          ),
+      });
     });
-    window.setInterval(() => updateHistory(), tickDuration);
+    window.setInterval(() => updateNowToPresent(), tickDuration);
     window.setInterval(() => cleanupHistory(), cleanupDuration);
-  });
+  }, []);
 
   return (
     <>
+      <div
+        style={{
+          position: "absolute",
+          right: 10,
+          top: 10,
+          padding: 10,
+          background: "#0008",
+          color: "white",
+          textAlign: "center",
+          fontSize: 30,
+        }}
+      >
+        <table>
+          <tbody>
+            {Object.entries(noteCounts).map(([noteName, count], i) => (
+              <tr key={i}>
+                <th>{noteName}</th>
+                <td>{count}</td>
+                <td style={{ fontSize: 15 }}>
+                  (
+                  {formatOrdinal(
+                    Object.values(noteCounts).filter((x) => x > count).length +
+                      1
+                  )}
+                  )
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <svg viewBox="0 0 624 350">
         {/* Group of white keys */}
         <g>
@@ -152,11 +227,11 @@ function App() {
                 x={3 + 7 * entry.index}
                 y={startY - pixelsPerMs * (now - entry.startTime)}
                 width="7"
-                height={
+                height={ensureNotNegative(
                   entry.ended
                     ? pixelsPerMs * (entry.endTime - entry.startTime)
                     : pixelsPerMs * (now - entry.startTime)
-                }
+                )}
                 fill={`hsl(${30 * entry.index - 90},75%,50%)`}
               />
 
