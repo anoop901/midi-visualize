@@ -3,6 +3,7 @@ import "./App.css";
 import { v4 as uuidv4 } from "uuid";
 import openSocket from "socket.io-client";
 import update from "immutability-helper";
+import classnames from "classnames";
 
 /*
 a history entry looks like this:
@@ -86,6 +87,8 @@ function App() {
   const [pressedKeys, setPressedKeys] = useState(Array(numKeys).fill(false));
   const [history, updateHistory] = useReducer(update, []);
   const [now, setNow] = useState(performance.now());
+  const [showNoteCounts, setShowNoteCounts] = useState(false);
+  const [showNoteRanks, setShowNoteRanks] = useState(false);
 
   const initialNoteCounts = useCallback(generateInitialNoteCounts, [])();
   const [noteCounts, updateNoteCounts] = useReducer(update, initialNoteCounts);
@@ -152,37 +155,6 @@ function App() {
 
   return (
     <>
-      <div
-        style={{
-          position: "absolute",
-          right: 10,
-          top: 10,
-          padding: 10,
-          background: "#0008",
-          color: "white",
-          textAlign: "center",
-          fontSize: 30,
-        }}
-      >
-        <table>
-          <tbody>
-            {Object.entries(noteCounts).map(([noteName, count], i) => (
-              <tr key={i}>
-                <th>{noteName}</th>
-                <td>{count}</td>
-                <td style={{ fontSize: 15 }}>
-                  (
-                  {formatOrdinal(
-                    Object.values(noteCounts).filter((x) => x > count).length +
-                      1
-                  )}
-                  )
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
       <svg viewBox="0 0 624 350">
         {/* Group of white keys */}
         <g>
@@ -257,6 +229,93 @@ function App() {
           ))}
         </g>
       </svg>
+      <div
+        className={classnames("hiding-panel", { pinned: showNoteCounts })}
+        style={{
+          position: "absolute",
+          right: 10,
+          top: 10,
+          padding: 10,
+          background: "#0008",
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <div className="controls">
+          <input
+            type="checkbox"
+            id="showNoteCounts"
+            value={showNoteCounts}
+            onChange={(e) => {
+              setShowNoteCounts(e.currentTarget.checked);
+            }}
+          />
+          <label htmlFor="showNoteCounts">Show note counts</label>
+        </div>
+        {showNoteCounts && (
+          <div className="controls">
+            <input
+              type="checkbox"
+              id="showNoteRanks"
+              value={showNoteRanks}
+              onChange={(e) => {
+                setShowNoteRanks(e.currentTarget.checked);
+              }}
+            />
+            <label htmlFor="showNoteRanks">Show ranks</label>
+          </div>
+        )}
+        {showNoteCounts && (
+          <button
+            className="controls"
+            onClick={(e) => {
+              updateNoteCounts({ $set: initialNoteCounts });
+            }}
+          >
+            Reset
+          </button>
+        )}
+        {showNoteCounts && (
+          <div>
+            <table
+              style={{
+                fontSize: 30,
+                textAlign: "center",
+              }}
+            >
+              <tbody>
+                {Object.entries(noteCounts).map(([noteName, count], i) => {
+                  const rank =
+                    Object.values(noteCounts).filter((x) => x > count).length +
+                    1;
+                  return (
+                    <tr key={i}>
+                      <th>{noteName}</th>
+                      <td>{count}</td>
+                      {showNoteRanks && (
+                        <td style={{ fontSize: 15 }}>{formatOrdinal(rank)}</td>
+                      )}
+                      {showNoteRanks && (
+                        <td>
+                          {rank === 1
+                            ? "🥇"
+                            : rank === 2
+                            ? "🥈"
+                            : rank === 3
+                            ? "🥉"
+                            : null}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   );
 }
