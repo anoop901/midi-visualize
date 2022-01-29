@@ -1,0 +1,33 @@
+.Queue {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+
+.Queue .current.title {
+  font-size: 30px;
+}
+
+.Queue .requester-full {
+  font-style: italic;
+  color: lightgray;
+}
+
+.Queue .current.composer-full {
+  font-size: 25px;
+}
+
+.Queue .composer,
+.Queue .title,
+.Queue .requester {
+  font-weight: bold;
+}
+
+.Queue .header {
+  text-transform: uppercase;
+  margin: 5px 0;
+}

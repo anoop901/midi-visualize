@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import openSocket from "socket.io-client";
 import update from "immutability-helper";
 import classnames from "classnames";
+import { Queue } from "./Queue";
 
 /*
 a history entry looks like this:
@@ -316,6 +317,7 @@ function App() {
           </div>
         )}
       </div>
+      <Queue />
     </>
   );
 }
