@@ -85,7 +85,10 @@ function generateInitialNoteCounts() {
 }
 
 function App() {
-  const [pressedKeys, setPressedKeys] = useState(Array(numKeys).fill(false));
+  const [pressedKeys, updatePressedKeys] = useReducer(
+    update,
+    Array(numKeys).fill(false)
+  );
   const [history, updateHistory] = useReducer(update, []);
   const [now, setNow] = useState(performance.now());
   const [showNoteCounts, setShowNoteCounts] = useState(false);
@@ -111,7 +114,8 @@ function App() {
   useEffect(() => {
     socket.on("noteon", (msg) => {
       const index = msg.note_number - midiKeyOffset;
-      setPressedKeys(pressedKeys.map((v, i) => (i === index ? true : v)));
+      console.log(pressedKeys);
+      updatePressedKeys({ [index]: { $set: true } });
       updateHistory({
         $push: [
           {
@@ -129,11 +133,7 @@ function App() {
     socket.on("noteoff", (msg) => {
       const index = msg.note_number - midiKeyOffset;
 
-      setPressedKeys(
-        pressedKeys.map((v, i) =>
-          i + midiKeyOffset === msg.note_number ? false : v
-        )
-      );
+      updatePressedKeys({ [index]: { $set: false } });
       updateHistory({
         $apply: (history) =>
           history.map((entry) =>
