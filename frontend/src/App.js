@@ -23,8 +23,9 @@ const tickDuration = 20;
 const cleanupDuration = 1000;
 const pixelsPerMs = 0.1;
 const startY = 300;
-const endY = 0;
-const maxSinceEnded = (startY - endY) / pixelsPerMs;
+const targetY = 100;
+const lifetimeAfterEnded = 2000;
+const lineLifetimeAfterEnded = 250;
 const numKeys = 88;
 const midiKeyOffset = 21;
 
@@ -106,7 +107,7 @@ function App() {
     updateHistory({
       $apply: (history) =>
         history.filter(
-          (entry) => !entry.ended || now - entry.endTime < maxSinceEnded
+          (entry) => !entry.ended || now - entry.endTime < lifetimeAfterEnded
         ),
     });
   }
@@ -114,7 +115,6 @@ function App() {
   useEffect(() => {
     socket.on("noteon", (msg) => {
       const index = msg.note_number - midiKeyOffset;
-      console.log(pressedKeys);
       updatePressedKeys({ [index]: { $set: true } });
       updateHistory({
         $push: [
@@ -194,40 +194,57 @@ function App() {
             )}
         </g>
         <g>
-          {history.map((entry) => (
-            <g opacity={entry.velocity} key={entry.id}>
-              <rect
-                x={3 + 7 * entry.index}
-                y={startY - pixelsPerMs * (now - entry.startTime)}
-                width="7"
-                height={ensureNotNegative(
-                  entry.ended
-                    ? pixelsPerMs * (entry.endTime - entry.startTime)
-                    : pixelsPerMs * (now - entry.startTime)
-                )}
-                fill={`hsl(${30 * entry.index - 90},75%,50%)`}
-              />
-
-              <circle
-                cx={6.5 + 7 * entry.index}
-                cy={startY - pixelsPerMs * (now - entry.startTime)}
-                r={12}
-                fill={`hsl(${30 * entry.index - 90},75%,75%)`}
-                stroke={`hsl(${30 * entry.index - 90},75%,50%)`}
-                strokeWidth="2"
-              />
-              <text
-                x={6.5 + 7 * entry.index}
-                y={startY - pixelsPerMs * (now - entry.startTime)}
-                textAnchor="middle"
-                alignmentBaseline="middle"
-                fill="black"
-                fontWeight="bold"
-              >
-                {indexToName(entry.index)}
-              </text>
-            </g>
-          ))}
+          {history.map((entry) => {
+            const circleY =
+              targetY +
+              (startY - targetY) *
+                Math.exp(
+                  (-pixelsPerMs / (startY - targetY)) * (now - entry.startTime)
+                );
+            const timeAfterEnded = entry.ended ? now - entry.endTime : null;
+            const opacityFactor =
+              timeAfterEnded == null
+                ? 1
+                : 1 - timeAfterEnded / lifetimeAfterEnded;
+            const rectWidthFactor =
+              timeAfterEnded == null
+                ? 1
+                : 1 - timeAfterEnded / lineLifetimeAfterEnded;
+            return (
+              <g opacity={entry.velocity * opacityFactor} key={entry.id}>
+                <rect
+                  x={3 + 3.5 * (1 - rectWidthFactor) + 7 * entry.index}
+                  y={circleY}
+                  width={ensureNotNegative(7 * rectWidthFactor)}
+                  height={ensureNotNegative(startY - circleY)}
+                  fill={`hsl(${30 * entry.index - 90},75%,50%)`}
+                  opacity={
+                    timeAfterEnded == null
+                      ? 1
+                      : 1 - timeAfterEnded / lineLifetimeAfterEnded
+                  }
+                />
+                <circle
+                  cx={6.5 + 7 * entry.index}
+                  cy={circleY}
+                  r={12}
+                  fill={`hsl(${30 * entry.index - 90},75%,75%)`}
+                  stroke={`hsl(${30 * entry.index - 90},75%,50%)`}
+                  strokeWidth="2"
+                />
+                <text
+                  x={6.5 + 7 * entry.index}
+                  y={circleY}
+                  textAnchor="middle"
+                  alignmentBaseline="middle"
+                  fill="black"
+                  fontWeight="bold"
+                >
+                  {indexToName(entry.index)}
+                </text>
+              </g>
+            );
+          })}
         </g>
       </svg>
       <div
