@@ -94,6 +94,7 @@ function App() {
   const [now, setNow] = useState(performance.now());
   const [showNoteCounts, setShowNoteCounts] = useState(false);
   const [showNoteRanks, setShowNoteRanks] = useState(false);
+  const [showMidiVisualizer, setShowMidiVisualizer] = useState(true);
 
   const initialNoteCounts = useCallback(generateInitialNoteCounts, [])();
   const [noteCounts, updateNoteCounts] = useReducer(update, initialNoteCounts);
@@ -156,97 +157,101 @@ function App() {
 
   return (
     <>
-      <svg viewBox="0 0 624 350">
-        {/* Group of white keys */}
-        <g>
-          {Array(numKeys)
-            .fill()
-            .map((v, i) =>
-              isWhiteKey(i) ? (
-                <rect
-                  key={i}
-                  x={84 * Math.floor(i / 12) + 12 * whiteKeysIndexOf[i % 12]}
-                  y="300"
-                  width="12"
-                  height="50"
-                  stroke="black"
-                  fill={pressedKeys[i] ? "red" : "white"}
-                />
-              ) : null
-            )}
-        </g>
-        {/* Group of black keys */}
-        <g>
-          {Array(numKeys)
-            .fill()
-            .map((v, i) =>
-              !isWhiteKey(i) ? (
-                <rect
-                  key={i}
-                  x={3 + 7 * i}
-                  y="300"
-                  width="7"
-                  height="30"
-                  stroke="black"
-                  fill={pressedKeys[i] ? "red" : "black"}
-                />
-              ) : null
-            )}
-        </g>
-        <g>
-          {history.map((entry) => {
-            const circleY =
-              targetY +
-              (startY - targetY) *
-                Math.exp(
-                  (-pixelsPerMs / (startY - targetY)) * (now - entry.startTime)
-                );
-            const timeAfterEnded = entry.ended ? now - entry.endTime : null;
-            const opacityFactor =
-              timeAfterEnded == null
-                ? 1
-                : 1 - timeAfterEnded / lifetimeAfterEnded;
-            const rectWidthFactor =
-              timeAfterEnded == null
-                ? 1
-                : 1 - timeAfterEnded / lineLifetimeAfterEnded;
-            return (
-              <g opacity={entry.velocity * opacityFactor} key={entry.id}>
-                <rect
-                  x={3 + 3.5 * (1 - rectWidthFactor) + 7 * entry.index}
-                  y={circleY}
-                  width={ensureNotNegative(7 * rectWidthFactor)}
-                  height={ensureNotNegative(startY - circleY)}
-                  fill={`hsl(${30 * entry.index - 90},75%,50%)`}
-                  opacity={
-                    timeAfterEnded == null
-                      ? 1
-                      : 1 - timeAfterEnded / lineLifetimeAfterEnded
-                  }
-                />
-                <circle
-                  cx={6.5 + 7 * entry.index}
-                  cy={circleY}
-                  r={12}
-                  fill={`hsl(${30 * entry.index - 90},75%,75%)`}
-                  stroke={`hsl(${30 * entry.index - 90},75%,50%)`}
-                  strokeWidth="2"
-                />
-                <text
-                  x={6.5 + 7 * entry.index}
-                  y={circleY}
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                  fill="black"
-                  fontWeight="bold"
-                >
-                  {indexToName(entry.index)}
-                </text>
-              </g>
-            );
-          })}
-        </g>
-      </svg>
+      {showMidiVisualizer && (
+        <svg viewBox="0 0 624 350">
+          {/* Group of white keys */}
+          <g>
+            {Array(numKeys)
+              .fill()
+              .map((v, i) =>
+                isWhiteKey(i) ? (
+                  <rect
+                    key={i}
+                    x={84 * Math.floor(i / 12) + 12 * whiteKeysIndexOf[i % 12]}
+                    y="300"
+                    width="12"
+                    height="50"
+                    stroke="black"
+                    fill={pressedKeys[i] ? "red" : "white"}
+                  />
+                ) : null
+              )}
+          </g>
+          {/* Group of black keys */}
+          <g>
+            {Array(numKeys)
+              .fill()
+              .map((v, i) =>
+                !isWhiteKey(i) ? (
+                  <rect
+                    key={i}
+                    x={3 + 7 * i}
+                    y="300"
+                    width="7"
+                    height="30"
+                    stroke="black"
+                    fill={pressedKeys[i] ? "red" : "black"}
+                  />
+                ) : null
+              )}
+          </g>
+          {/* Played notes */}
+          <g>
+            {history.map((entry) => {
+              const circleY =
+                targetY +
+                (startY - targetY) *
+                  Math.exp(
+                    (-pixelsPerMs / (startY - targetY)) *
+                      (now - entry.startTime)
+                  );
+              const timeAfterEnded = entry.ended ? now - entry.endTime : null;
+              const opacityFactor =
+                timeAfterEnded == null
+                  ? 1
+                  : 1 - timeAfterEnded / lifetimeAfterEnded;
+              const rectWidthFactor =
+                timeAfterEnded == null
+                  ? 1
+                  : 1 - timeAfterEnded / lineLifetimeAfterEnded;
+              return (
+                <g opacity={entry.velocity * opacityFactor} key={entry.id}>
+                  <rect
+                    x={3 + 3.5 * (1 - rectWidthFactor) + 7 * entry.index}
+                    y={circleY}
+                    width={ensureNotNegative(7 * rectWidthFactor)}
+                    height={ensureNotNegative(startY - circleY)}
+                    fill={`hsl(${30 * entry.index - 90},75%,50%)`}
+                    opacity={
+                      timeAfterEnded == null
+                        ? 1
+                        : 1 - timeAfterEnded / lineLifetimeAfterEnded
+                    }
+                  />
+                  <circle
+                    cx={6.5 + 7 * entry.index}
+                    cy={circleY}
+                    r={12}
+                    fill={`hsl(${30 * entry.index - 90},75%,75%)`}
+                    stroke={`hsl(${30 * entry.index - 90},75%,50%)`}
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={6.5 + 7 * entry.index}
+                    y={circleY}
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                    fill="black"
+                    fontWeight="bold"
+                  >
+                    {indexToName(entry.index)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+      )}
       <div
         className={classnames("hiding-panel", { pinned: showNoteCounts })}
         style={{
@@ -261,6 +266,17 @@ function App() {
           justifyContent: "center",
         }}
       >
+        <div className="controls">
+          <input
+            type="checkbox"
+            id="showMidiVisualizer"
+            checked={showMidiVisualizer}
+            onChange={(e) => {
+              setShowMidiVisualizer(e.currentTarget.checked);
+            }}
+          />
+          <label htmlFor="showMidiVisualizer">Show MIDI visualizer</label>
+        </div>
         <div className="controls">
           <input
             type="checkbox"
