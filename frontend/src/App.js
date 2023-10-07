@@ -19,10 +19,15 @@ a history entry looks like this:
 
 const socket = openSocket();
 
+const sceneWidth = 624;
+const sceneHeight = 350;
+
 const tickDuration = 20;
 const cleanupDuration = 1000;
 const pixelsPerMs = 0.1;
-const startY = 300;
+const whiteKeyHeight = 64;
+const blackKeyHeight = 40;
+const startY = sceneHeight - whiteKeyHeight;
 const targetY = 100;
 const lifetimeAfterEnded = 2000;
 const lineLifetimeAfterEnded = 250;
@@ -158,7 +163,7 @@ function App() {
   return (
     <>
       {showMidiVisualizer && (
-        <svg viewBox="0 0 624 350">
+        <svg viewBox={`0 0 ${sceneWidth} ${sceneHeight}`}>
           {/* Group of white keys */}
           <g>
             {Array(numKeys)
@@ -168,9 +173,9 @@ function App() {
                   <rect
                     key={i}
                     x={84 * Math.floor(i / 12) + 12 * whiteKeysIndexOf[i % 12]}
-                    y="300"
+                    y={startY}
                     width="12"
-                    height="50"
+                    height={whiteKeyHeight}
                     stroke="black"
                     fill={pressedKeys[i] ? "red" : "white"}
                   />
@@ -186,9 +191,9 @@ function App() {
                   <rect
                     key={i}
                     x={3 + 7 * i}
-                    y="300"
+                    y={startY}
                     width="7"
-                    height="30"
+                    height={blackKeyHeight}
                     stroke="black"
                     fill={pressedKeys[i] ? "red" : "black"}
                   />
